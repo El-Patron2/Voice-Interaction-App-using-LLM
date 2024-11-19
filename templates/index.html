@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Interaction App</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #B5DEFF; /* Pastel Blue */
+            --secondary-color: #FFB5E8; /* Pastel Pink */
+            --accent-color: #B5EAD7; /* Pastel Green */
+            --background-color: #FDFAF6; /* Soft Off-white */
+            --text-color: #4A4A4A; /* Soft Black */
+            --border-color: #DFE4E8;
+            --hover-feedback: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            line-height: 1.6;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            padding: 2rem;
+            box-sizing: border-box;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: fadeIn 1s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h1 {
+            color: var(--text-color);
+            font-size: 2.5rem;
+            font-weight: normal;
+            margin-bottom: 1rem;
+            letter-spacing: 1px;
+        }
+
+        .upload-container {
+            background-color: white;
+            border-radius: 1.5rem;
+            padding: 2.5rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            margin-bottom: 2rem;
+            transition: transform var(--hover-feedback);
+        }
+
+        .upload-container:hover {
+            transform: translateY(-2px);
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .file-input-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 3rem;
+            border: 2px dashed var(--primary-color);
+            border-radius: 1rem;
+            cursor: pointer;
+            transition: all var(--hover-feedback);
+            background-color: rgba(181, 222, 255, 0.05);
+        }
+
+        .file-input-label:hover {
+            border-color: var(--secondary-color);
+            background-color: rgba(255, 181, 232, 0.05);
+            transform: scale(1.01);
+        }
+
+        .file-input-label i {
+            font-size: 3rem;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+            transition: color var(--hover-feedback);
+        }
+
+        .file-input-label:hover i {
+            color: var(--secondary-color);
+        }
+
+        .file-input {
+            position: absolute;
+            width: 0.1px;
+            height: 0.1px;
+            opacity: 0;
+            overflow: hidden;
+            z-index: -1;
+        }
+
+        .analyze-btn {
+            background-color: var(--primary-color);
+            color: var(--text-color);
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 0.8rem;
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all var(--hover-feedback);
+            display: none;
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .analyze-btn::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: transparent;
+            transition: background-color var(--hover-feedback);
+        }
+
+        .analyze-btn:hover {
+            transform: translateY(-2px);
+            background-color: var(--secondary-color);
+        }
+
+        .analyze-btn:active {
+            transform: translateY(1px);
+        }
+
+        .result-container {
+            background-color: white;
+            border-radius: 1.5rem;
+            padding: 2.5rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            display: none;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-text {
+            white-space: pre-wrap;
+            line-height: 1.8;
+            margin-bottom: 2rem;
+            color: var(--text-color);
+        }
+
+        .download-btn {
+            display: inline-flex;
+            align-items: center;
+            padding: 1rem 2rem;
+            background-color: var(--accent-color);
+            color: var(--text-color);
+            text-decoration: none;
+            border-radius: 0.8rem;
+            transition: all var(--hover-feedback);
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 1.1rem;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            background-color: var(--secondary-color);
+        }
+
+        .download-btn:active {
+            transform: translateY(1px);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .loading i {
+            color: var(--primary-color);
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .spinner {
+            animation: spin 1.5s linear infinite;
+        }
+
+        /* Toast Notification Style */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: var(--accent-color);
+            padding: 1rem 2rem;
+            border-radius: 0.8rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            display: none;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        /* Haptic Feedback Class */
+        .haptic {
+            animation: haptic 0.1s ease-in-out;
+        }
+
+        @keyframes haptic {
+            0% { transform: scale(1); }
+            50% { transform: scale(0.98); }
+            100% { transform: scale(1); }
+        }
+        .record-container {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+            gap: 10px;
+        }
+
+        .record-btn {
+            background-color: #ff4444;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .record-btn:hover {
+            background-color: #cc0000;
+        }
+
+        .record-btn.recording {
+            animation: pulse 1.5s infinite;
+        }
+
+        .timer {
+            font-size: 1.2rem;
+            color: #666;
+            margin-left: 10px;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        /* Add a divider between record and upload sections */
+        .section-divider {
+            text-align: center;
+            margin: 20px 0;
+            color: #666;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .section-divider::before,
+        .section-divider::after {
+            content: "";
+            flex: 1;
+            border-bottom: 1px solid #ddd;
+            margin: 0 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Voice Interaction App</h1>
+            <p>Record audio or Upload your audio file for instant transcription and sentiment analysis</p>
+        </header>
+
+        <div class="record-container">
+            <button type="button" class="record-btn" id="recordBtn">
+                <i class="fas fa-microphone"></i>
+                <span>Start Recording</span>
+            </button>
+            <span class="timer" id="timer"></span>
+        </div>
+
+        <div class="section-divider">OR</div>
+
+        <div class="upload-container">
+            <form id="uploadForm">
+                <div class="file-input-wrapper">
+                    <label class="file-input-label" for="audioFile">
+                        <i class="fas fa-microphone"></i>
+                        <span>Drop your audio file here or click to browse</span>
+                        <small id="fileName" style="margin-top: 0.8rem; color: #8A8A8A;"></small>
+                    </label>
+                    <input type="file" id="audioFile" class="file-input" name="audioFile" accept="audio/*" required>
+                </div>
+                <button type="submit" class="analyze-btn">
+                    <i class="fas fa-waveform"></i>
+                    Analyze Audio
+                </button>
+            </form>
+        </div>
+
+        <div class="loading">
+            <i class="fas fa-circle-notch spinner"></i>
+            <p>Processing your audio...</p>
+        </div>
+
+        <div class="result-container">
+            <div class="result-text"></div>
+            <a href="#" class="download-btn" download>
+                <i class="fas fa-download"></i>
+                <span>Download Analysis</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const form = document.getElementById('uploadForm');
+        const fileInput = document.getElementById('audioFile');
+        const fileName = document.getElementById('fileName');
+        const analyzeBtn = document.querySelector('.analyze-btn');
+        const loading = document.querySelector('.loading');
+        const resultContainer = document.querySelector('.result-container');
+        const resultText = document.querySelector('.result-text');
+        const downloadBtn = document.querySelector('.download-btn');
+        const toast = document.getElementById('toast');
+        const recordBtn = document.getElementById('recordBtn');
+        const timer = document.getElementById('timer');
+        let mediaRecorder;
+        let audioChunks = [];
+        let recordingTimer;
+        let recordingDuration = 0;
+
+        function triggerHaptic(element) {
+            element.classList.add('haptic');
+            setTimeout(() => element.classList.remove('haptic'), 100);
+            if (navigator.vibrate) {
+                navigator.vibrate(50);
+            }
+        }
+
+        function showToast(message, duration = 3000) {
+            toast.textContent = message;
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, duration);
+        }
+
+
+        // Haptic feedback function
+        function triggerHaptic(element) {
+            element.classList.add('haptic');
+            setTimeout(() => element.classList.remove('haptic'), 100);
+            
+            // Vibrate if supported
+            if (navigator.vibrate) {
+                navigator.vibrate(50);
+            }
+        }
+
+        // Toast notification function
+        function showToast(message, duration = 3000) {
+            toast.textContent = message;
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, duration);
+        }
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) {
+                fileName.textContent = e.target.files[0].name;
+                analyzeBtn.style.display = 'block';
+                triggerHaptic(fileName);
+                showToast('File selected successfully');
+            } else {
+                fileName.textContent = '';
+                analyzeBtn.style.display = 'none';
+            }
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            triggerHaptic(analyzeBtn);
+
+            const formData = new FormData();
+            formData.append('audioFile', fileInput.files[0]);
+
+            loading.style.display = 'block';
+            resultContainer.style.display = 'none';
+            analyzeBtn.disabled = true;
+
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    resultText.textContent = data.result;
+                    downloadBtn.href = data.downloadPath;
+                    resultContainer.style.display = 'block';
+                    triggerHaptic(resultContainer);
+                    showToast('Analysis completed successfully');
+                } else {
+                    const error = await response.json();
+                    showToast(error.error || 'Analysis failed');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('An error occurred during analysis');
+            } finally {
+                loading.style.display = 'none';
+                analyzeBtn.disabled = false;
+            }
+        });
+
+        // Drag and drop functionality
+        const dropZone = document.querySelector('.file-input-label');
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight(e) {
+            dropZone.classList.add('border-primary');
+            triggerHaptic(dropZone);
+        }
+
+        function unhighlight(e) {
+            dropZone.classList.remove('border-primary');
+        }
+
+        dropZone.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            fileInput.files = files;
+            
+            if (files[0]) {
+                fileName.textContent = files[0].name;
+                analyzeBtn.style.display = 'block';
+                triggerHaptic(dropZone);
+                showToast('File dropped successfully');
+            }
+        }
+
+        // Add haptic feedback to download button
+        downloadBtn.addEventListener('click', () => {
+            triggerHaptic(downloadBtn);
+        });
+        async function setupRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
+                    await submitRecording(audioBlob);
+                };
+
+                return true;
+            } catch (error) {
+                showToast('Microphone access denied or not available');
+                return false;
+            }
+        }
+
+        function updateTimer() {
+            const minutes = Math.floor(recordingDuration / 60);
+            const seconds = recordingDuration % 60;
+            timer.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        async function startRecording() {
+            audioChunks = [];
+            mediaRecorder.start();
+            recordBtn.classList.add('recording');
+            recordBtn.innerHTML = '<i class="fas fa-stop"></i><span>Stop Recording</span>';
+            recordingDuration = 0;
+            updateTimer();
+            recordingTimer = setInterval(() => {
+                recordingDuration++;
+                updateTimer();
+            }, 1000);
+        }
+
+        function stopRecording() {
+            mediaRecorder.stop();
+            clearInterval(recordingTimer);
+            recordBtn.classList.remove('recording');
+            recordBtn.innerHTML = '<i class="fas fa-microphone"></i><span>Start Recording</span>';
+        }
+
+        async function submitRecording(audioBlob) {
+            loading.style.display = 'block';
+            resultContainer.style.display = 'none';
+
+            const formData = new FormData();
+            formData.append('audioFile', audioBlob, 'recording.mp3');
+
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    resultText.textContent = data.result;
+                    downloadBtn.href = data.downloadPath;
+                    resultContainer.style.display = 'block';
+                    triggerHaptic(resultContainer);
+                    showToast('Analysis completed successfully');
+                } else {
+                    const error = await response.json();
+                    showToast(error.error || 'Analysis failed');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('An error occurred during analysis');
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        // Add record button event listener
+        recordBtn.addEventListener('click', async () => {
+            if (!mediaRecorder) {
+                const initialized = await setupRecording();
+                if (initialized) {
+                    startRecording();
+                }
+            } else if (mediaRecorder.state === 'recording') {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+            triggerHaptic(recordBtn);
+        });
+    </script>
+</body>
+</html>
