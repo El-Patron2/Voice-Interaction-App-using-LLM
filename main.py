@@ -14,9 +14,8 @@ app = Flask(__name__)
 UPLOAD_FOLDER = Path(app.root_path) / 'output'
 UPLOAD_FOLDER.mkdir(exist_ok=True)
 
-# Exponential backoff and retry configuration
 MAX_RETRIES = 3
-BASE_DELAY = 1  # seconds
+BASE_DELAY = 1
 
 def exponential_backoff(attempt):
     return BASE_DELAY * (2 ** attempt)
@@ -64,8 +63,7 @@ def analyze():
         audio_file.save(temp_path)
         mime_type = "audio/mpeg" if file_extension == '.mp3' else "audio/wav"
         
-        transcription = generate_transcription(temp_path, mime_type)
-        final_result = generate_analysis(transcription)
+        final_result = generate_transcription_and_analysis(temp_path, mime_type)
         
         output_path = UPLOAD_FOLDER / f"{base_filename}.txt"
         with open(output_path, 'w', encoding='utf-8') as f:
@@ -93,7 +91,7 @@ def download_file(filename):
         return jsonify(error="File not found or unable to download."), 404
 
 @retry_with_backoff
-def generate_transcription(audio_path, mime_type):
+def generate_transcription_and_analysis(audio_path, mime_type):
     vertexai.init(project="voiceinteractionapp-436602", location="us-central1")
     model = GenerativeModel("gemini-1.5-pro")
     
@@ -103,39 +101,28 @@ def generate_transcription(audio_path, mime_type):
     audio_base64 = base64.b64encode(audio_content).decode("utf-8")
     audio_part = Part.from_data(data=audio_base64, mime_type=mime_type)
     
-    transcription_prompt = """Provide a detailed and accurate transcription of this audio recording. Focus on:
-    1. Exact words spoken
-    2. Capture all speech clearly and accurately
-    3. Include natural pauses with "..." notation
-    4. Note any significant background sounds in [brackets]
-    5. Mark unclear segments with [unclear]
-    6. Indicate speaker changes with "Speaker 1:", "Speaker 2:", etc.
-    Transcribe the audio as naturally and accurately as possible."""
+    prompt = """Provide a detailed transcription and analysis of this audio recording:
 
-    config = GenerationConfig(temperature=0.2, top_p=0.95, top_k=40, max_output_tokens=2048)
-    response = model.generate_content([transcription_prompt, audio_part], generation_config=config, safety_settings=safety_settings)
+    1. Transcription:
+       - Exact words spoken
+       - Capture all speech clearly and accurately
+       - Include natural pauses with "..." notation
+       - Note any significant background sounds in [brackets]
+       - Mark unclear segments with [unclear]
+       - Indicate speaker changes with "Speaker 1:", "Speaker 2:", etc.
+
+    2. Analysis:
+       - Summary: Main topics, key points, context, and purpose
+       - Sentiment Analysis: Overall tone, emotion, speaker attitude, and confidence level
+       - Key Insights: Important quotes, action items, and notable speech patterns
+       - Additional Observations: Speech characteristics and relevant background context
+
+    Provide the transcription first, followed by the analysis."""
+
+    config = GenerationConfig(temperature=0.3, top_p=0.9, top_k=40, max_output_tokens=4096)
+    response = model.generate_content([prompt, audio_part], generation_config=config, safety_settings=safety_settings)
     
-    return response.text if hasattr(response, 'text') else "Transcription completed but no text was generated."
-
-@retry_with_backoff
-def generate_analysis(transcription):
-    model = GenerativeModel("gemini-1.5-pro")
-    
-    analysis_prompt = f"""Based on this transcription, provide a comprehensive analysis:
-
-    Transcription:
-    {transcription}
-
-    Analyze and provide:
-    1. Summary: Main topics, key points, context, and purpose
-    2. Sentiment Analysis: Overall tone, emotion, speaker attitude, and confidence level
-    3. Key Insights: Important quotes, action items, and notable speech patterns
-    4. Additional Observations: Speech characteristics and relevant background context"""
-
-    config = GenerationConfig(temperature=0.4, top_p=0.8, top_k=40, max_output_tokens=2048)
-    response = model.generate_content(analysis_prompt, generation_config=config, safety_settings=safety_settings)
-    
-    return response.text if hasattr(response, 'text') else "Analysis completed but no text was generated."
+    return response.text if hasattr(response, 'text') else "Transcription and analysis completed but no text was generated."
 
 safety_settings = [
     SafetySetting(category=SafetySetting.HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold=SafetySetting.HarmBlockThreshold.BLOCK_NONE),
